@@ -1,0 +1,3 @@
+[submodule "ahocorasick"]
+	path = ahocorasick
+	url = https://github.com/morenice/ahocorasick.git

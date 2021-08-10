@@ -1,0 +1,13 @@
+{
+    "workbench.colorTheme": "Visual Studio Light - C++",
+    "files.associations": {
+        "__functional_03": "c",
+        "functional": "c",
+        "istream": "cpp",
+        "aho_queue.h": "c",
+        "aho_text.h": "c",
+        "ahocorasick.h": "c",
+        "aho_trie.h": "c",
+        "locale": "c"
+    }
+}
