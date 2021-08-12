@@ -184,8 +184,15 @@ void search_motif(struct ahocorasick *aho, const char* seq, const char* chrom, i
 void init_ahocorasick(struct ahocorasick *aho, const char** pattern, int n_patterns)
 {
 	aho_init(aho);
+    /** 
+    for (int i = 0; i < n_patterns; ++i)
+    {
+        printf("# Pattern: %s\n", pattern[i]);
+    }
+    **/
 	for (int i = 0; i < n_patterns; i++)
 	{
+        printf("# %s\n", pattern[i]);
 		aho_add_match_text(aho, pattern[i], strlen(pattern[i]));
 	}
 	aho_create_trie(aho);
@@ -213,6 +220,52 @@ void search_fasta(const char** file_path, const char** pattern, int n_patterns, 
     fclose(fp);
 }
 
+int read_fasta(const char** file_path, struct chrom_seq **chrom_seqs)
+{
+	kseq_t *seq;
+	FILE* fp;
+    int n = 0, slen = 0, qlen = 0;
+    if (!(fp = fopen(file_path, "r"))) {
+		fatal("File open failed\n");
+	}
+    seq = kseq_init(fileno(fp));
+    while (kseq_read(seq) >= 0)
+    {
+        upper_str(seq->seq.s, strlen(seq->seq.s));
+        chrom_seqs[n] = malloc(sizeof(struct chrom_seq));
+        chrom_seqs[n]->seq = malloc(seq->seq.l+1);
+        chrom_seqs[n]->chrom = malloc(seq->name.l+1);
+		memcpy(chrom_seqs[n]->seq, seq->seq.s, seq->seq.l);
+        memcpy(chrom_seqs[n]->chrom, seq->name.s, seq->name.l);
+        ++n;
+    }
+    kseq_destroy(seq);
+    fclose(fp);
+    return n;
+}
+
+void search_fasta_par(void *arg)
+{
+    struct par_arg *parg = (struct par_arg *)arg;
+    char* pattern = parg->pattern;
+    int n_patterns = parg->n_patterns;
+    struct chrom_seq *chrom_seq = parg->chrom_seq;
+    int motif_len = parg->motif_len;
+    struct ahocorasick aho;
+	init_ahocorasick(&aho, pattern, n_patterns);
+    search_motif(&aho, chrom_seq->seq, chrom_seq->chrom, motif_len);
+    aho_destroy(&aho);
+}
+
+void free_par_arg(void *arg)
+{
+    struct par_arg *parg = (struct par_arg *)arg;
+    free(parg->chrom_seq->chrom);
+    free(parg->chrom_seq->seq);
+    free(parg->chrom_seq);
+    free(parg);
+}
+
 char* parse_iupac(char c)
 {
 	char* new_char = malloc(5);
@@ -230,15 +283,15 @@ char* parse_iupac(char c)
 		case 'K':
 			memcpy(new_char, "GT", 2); break;
 		case 'V':
-			memcpy(new_char, "ACG", 2); break;
+			memcpy(new_char, "ACG", 3); break;
 		case 'H':
-			memcpy(new_char, "ACT", 2); break;
+			memcpy(new_char, "ACT", 3); break;
 		case 'D':
-			memcpy(new_char, "AGT", 2); break;
+			memcpy(new_char, "AGT", 3); break;
 		case 'B':
-			memcpy(new_char, "CGT", 2); break;
+			memcpy(new_char, "CGT", 3); break;
 		case 'N':
-			memcpy(new_char, "AGCT", 2); break;
+			memcpy(new_char, "AGCT", 4); break;
 		default:
 			free(new_char);
 			new_char = NULL;
@@ -262,7 +315,7 @@ int parse_motif_pattern_help(char* motif, char** pattern, int* index)
 			pattern[ind] = malloc(strlen(motif)+1);
 			memcpy(pattern[ind], motif, strlen(motif));
 			pattern[++ind] = reverseComplement(motif, strlen(motif));
-			*index = ind;
+			*index = ind+1;
 		}
 	} else if (is_valid_ambiguity_codes(motif, strlen(motif))) {
 		char* tmp = malloc(sizeof(motif)+1);
@@ -289,5 +342,5 @@ int parse_motif_pattern(char* motif, char** pattern)
 	initNtChars();
 	initNtCompTable();
 	parse_motif_pattern_help(motif, pattern, &ind);
-	return ind+1;
+	return ind;
 }

@@ -6,6 +6,7 @@
 
 #define MIN(a,b) (a) < (b) ? (a) : (b)
 #define MAX_THREADS  sysconf(_SC_NPROCESSORS_ONLN)
+#define MAX_CHROM 100
 
 void version()
 {
@@ -29,7 +30,6 @@ int main(int argc, char const *argv[])
     char *file_path = NULL;
     char *motif = NULL;
     int c;
-
     while (1)
     {
         static struct option long_options[] =
@@ -96,10 +96,36 @@ int main(int argc, char const *argv[])
     n_threads = n_threads ? n_threads : MAX_THREADS;
     char *pattern[MAX_PATTERN_LEN];
     int num = parse_motif_pattern(motif, &pattern);
-    search_fasta(file_path, pattern, num, strlen(motif));
-    for (int i = 0; i < num; ++i)
-    {
-        free(pattern[i]);
+    struct chrom_seq* chrom_seqs[MAX_CHROM];
+
+    if (n_threads > 1) {
+        tpool_t *p = tpool_init(n_threads);
+        tpool_process_t *q = tpool_process_init(p, 16, true);
+        int num_chrom = read_fasta(file_path, chrom_seqs);
+        
+        for (int i = 0; i < num_chrom; ++i) {
+            int blk;
+            struct par_arg *arg = malloc(sizeof(struct par_arg));
+            arg->chrom_seq = chrom_seqs[i];
+            arg->motif_len = strlen(motif);
+            arg->n_patterns = num;
+            arg->pattern = pattern;
+            do {
+                blk = tpool_dispatch(p, q, &search_fasta_par, arg, NULL, &free_par_arg, true);
+                if (blk == -1) {
+                    usleep(10000);
+                }
+            } while (blk == -1);
+        }
+        tpool_process_flush(q);
+        tpool_process_destroy(q);
+        tpool_destroy(p);
+    } else {
+        search_fasta(file_path, pattern, num, strlen(motif));
+        for (int i = 0; i < num; ++i)
+        {
+            free(pattern[i]);
+        }
+        return 0;
     }
-    return 0;
 }

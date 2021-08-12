@@ -8,6 +8,7 @@
         "aho_text.h": "c",
         "ahocorasick.h": "c",
         "aho_trie.h": "c",
-        "locale": "c"
+        "locale": "c",
+        "thread_pool.h": "c"
     }
 }
