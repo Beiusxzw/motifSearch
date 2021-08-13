@@ -192,7 +192,6 @@ void init_ahocorasick(struct ahocorasick *aho, const char** pattern, int n_patte
     **/
 	for (int i = 0; i < n_patterns; i++)
 	{
-        printf("# %s\n", pattern[i]);
 		aho_add_match_text(aho, pattern[i], strlen(pattern[i]));
 	}
 	aho_create_trie(aho);
@@ -271,27 +270,27 @@ char* parse_iupac(char c)
 	char* new_char = malloc(5);
 	switch (c) {
 		case 'M':
-			memcpy(new_char, "AC", 2); break;
+			return "AC";
 		case 'R':
-			memcpy(new_char, "AG", 2); break;
+			return "AG";
 		case 'W':
-			memcpy(new_char, "AT", 2); break;
+			return "AT";
 		case 'S':
-			memcpy(new_char, "CG", 2); break;
+			return "CG";
 		case 'Y':
-			memcpy(new_char, "CT", 2); break;
+			return "CT";
 		case 'K':
-			memcpy(new_char, "GT", 2); break;
+			return "GT";
 		case 'V':
-			memcpy(new_char, "ACG", 3); break;
+			return "ACG";
 		case 'H':
-			memcpy(new_char, "ACT", 3); break;
+			return "ACT";
 		case 'D':
-			memcpy(new_char, "AGT", 3); break;
+			return "AGT";
 		case 'B':
-			memcpy(new_char, "CGT", 3); break;
+			return "CGT";
 		case 'N':
-			memcpy(new_char, "AGCT", 4); break;
+			return "AGCT";
 		default:
 			free(new_char);
 			new_char = NULL;
@@ -321,13 +320,12 @@ int parse_motif_pattern_help(char* motif, char** pattern, int* index)
 		char* tmp = malloc(sizeof(motif)+1);
 		memcpy(tmp, motif, strlen(motif));
 		for (int i = 0; i < strlen(motif); ++i) {
-			char* amb = parse_iupac(motif[i]);
+			char* amb = parse_iupac(tmp[i]);
 			if (amb) {
 				for (int j = 0; j < strlen(amb); ++j) {
 					tmp[i] = amb[j];
 					parse_motif_pattern_help(tmp, pattern, index);
 				}
-				free(amb);
 			}
 		}
 		free(tmp);
