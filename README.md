@@ -1,5 +1,6 @@
 # motifSearch
-Snow's motif search in C (A really simplified command, expecting to be **5×** faster than homer's scanMotifGenome in single-thread mode)
+Current version: 0.0.2 == multi-threaded searching
+Snow's motif search in C (A simple command-line-tool, expecting to be faster than homer's scanMotifGenome)
 
 
 Motif searching supporting [IUPAC ambiguous codes](https://droog.gs.washington.edu/mdecode/images/iupac.html).
@@ -7,17 +8,16 @@ Motif searching supporting [IUPAC ambiguous codes](https://droog.gs.washington.e
 
 ## Usage 
 
- ```
- motifSearch -f <FASTA> -m <MOTIF> -p <THREAD> > <OUTPUT-BED>
+```
+motifSearch -f <FASTA> -m <MOTIF> -p <THREAD> > <OUTPUT-BED>
 -f/--fasta      fasta file
 -m/--motif      motif string
 -p/--nthreads   number of threads
 ```
 
-To re-compile, `gcc main.c motifSearch.c ahocorasick/src/*c -w -o motifSearch`
+To compile, `make && make clean`
 
 ## TODO
 
 - [ ] stats compare to other methods
-- [ ] multi-threaded searching
 - [ ] mismatch handling

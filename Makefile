@@ -1,4 +1,3 @@
-# Makefile Template for C. Created by Snow.
 CFLAGS=	 -g -Wall -Wc++-compat -w #-Wextra
 INCLUDES=
 OBJS=

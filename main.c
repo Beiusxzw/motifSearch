@@ -11,7 +11,7 @@
 
 void version()
 {
-    printf("Snow's motifSearch version 0.0.1\n");
+    printf("Snow's motifSearch version 0.0.2\n");
     printf("Usage:\n");
     printf("\t-f/--fasta\tfasta file\n");
     printf("\t-m/--motif\tmotif string\n");
