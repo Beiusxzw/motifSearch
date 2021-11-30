@@ -1,3 +1,4 @@
 *.dYSM
 *.o
 *.a
+.vscode
