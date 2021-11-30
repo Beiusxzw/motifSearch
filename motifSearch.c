@@ -165,19 +165,32 @@ void upper_str(char *__s, size_t __size)
 
 void aho_callback(void *arg, struct aho_match_t *m)
 {
-	struct motif_info *t = (struct tmp *)arg;
-	printf("%s\t%lu\t%lu\n", t->chrom, m->pos, m->pos + t->motif_len);
+	struct pt_info *t = (struct pt_info *) arg;
+    while (pthread_mutex_trylock(t->mu) != 0);
+    if ((m->id % 2) == 0) printf("%s\t%lu\t%lu\t.\t.\t+\n", t->chrom, m->pos, m->pos + t->motif_len);
+    else printf("%s\t%lu\t%lu\t.\t.\t-\n", t->chrom, m->pos, m->pos + t->motif_len);
+    pthread_mutex_unlock(t->mu);
 }
 
-void search_motif(struct ahocorasick *aho, const char* seq, const char* chrom, int motif_len)
+
+void aho_callback_nolock(void *arg, struct aho_match_t *m)
 {
-	struct motif_info *arg;
-	if (!(arg = malloc(sizeof(struct motif_info)))) {
+	struct pt_info *t = (struct pt_info *) arg;
+    if ((m->id % 2) == 0) printf("%s\t%lu\t%lu\t.\t.\t+\n", t->chrom, m->pos, m->pos + t->motif_len);
+    else printf("%s\t%lu\t%lu\t.\t.\t-\n", t->chrom, m->pos, m->pos + t->motif_len);
+}
+
+void search_motif(struct ahocorasick *aho, const char* seq, const char* chrom, int motif_len, bool uselock, pthread_mutex_t *mu)
+{
+	struct pt_info *arg;
+	if (!(arg = malloc(sizeof(struct pt_info)))) {
 		fatal("Memory allocation failed");
 	}
 	arg->chrom = chrom;
 	arg->motif_len = motif_len;
-	aho_register_match_callback(aho, &aho_callback, (void *)arg);
+    arg->mu = mu;
+	if (uselock) aho_register_match_callback(aho, &aho_callback, (void *)arg);
+    else aho_register_match_callback(aho, &aho_callback_nolock, (void *)arg);
 	aho_findtext(aho, seq, strlen(seq));
 }
 
@@ -197,71 +210,26 @@ void init_ahocorasick(struct ahocorasick *aho, const char** pattern, int n_patte
 	aho_create_trie(aho);
 }
 
-void search_fasta(const char** file_path, const char** pattern, int n_patterns, int motif_len)
-{
-	kseq_t *seq;
-	FILE* fp;
-    int n = 0, slen = 0, qlen = 0;
-    if (!(fp = fopen(file_path, "r"))) {
-		fatal("File open failed\n");
-	}
-    seq = kseq_init(fileno(fp));
-	struct ahocorasick aho;
-	init_ahocorasick(&aho, pattern, n_patterns);
-	while (kseq_read(seq) >= 0)
-    {
-        upper_str(seq->seq.s, strlen(seq->seq.s));
-		search_motif(&aho, seq->seq.s, seq->name.s, motif_len);
-        ++n;
-    }
-	aho_destroy(&aho);
-	kseq_destroy(seq);
-    fclose(fp);
-}
-
-int read_fasta(const char** file_path, struct chrom_seq **chrom_seqs)
-{
-	kseq_t *seq;
-	FILE* fp;
-    int n = 0, slen = 0, qlen = 0;
-    if (!(fp = fopen(file_path, "r"))) {
-		fatal("File open failed\n");
-	}
-    seq = kseq_init(fileno(fp));
-    while (kseq_read(seq) >= 0)
-    {
-        upper_str(seq->seq.s, strlen(seq->seq.s));
-        chrom_seqs[n] = malloc(sizeof(struct chrom_seq));
-        chrom_seqs[n]->seq = malloc(seq->seq.l+1);
-        chrom_seqs[n]->chrom = malloc(seq->name.l+1);
-		memcpy(chrom_seqs[n]->seq, seq->seq.s, seq->seq.l);
-        memcpy(chrom_seqs[n]->chrom, seq->name.s, seq->name.l);
-        ++n;
-    }
-    kseq_destroy(seq);
-    fclose(fp);
-    return n;
-}
-
 void search_fasta_par(void *arg)
-{
+{   
     struct par_arg *parg = (struct par_arg *)arg;
-    char* pattern = parg->pattern;
+    char** pattern = parg->pattern;
     int n_patterns = parg->n_patterns;
-    struct chrom_seq *chrom_seq = parg->chrom_seq;
     int motif_len = parg->motif_len;
     struct ahocorasick aho;
+    struct fmm *m = readFastaByMmap(parg->file_path);
+    char *seq = getFastaSequenceMmap2(m->mm, parg->entry);
 	init_ahocorasick(&aho, pattern, n_patterns);
-    search_motif(&aho, chrom_seq->seq, chrom_seq->chrom, motif_len);
+    upper_str(seq, strlen(seq));
+    if (parg->n_threads > 1) search_motif(&aho, seq, parg->chrom, motif_len, true, parg->pt_mu);
+    else search_motif(&aho, seq, parg->chrom, motif_len, false, NULL);
     aho_destroy(&aho);
 }
+
 
 void free_par_arg(void *arg)
 {
     struct par_arg *parg = (struct par_arg *)arg;
-    free(parg->chrom_seq->chrom);
-    free(parg->chrom_seq->seq);
-    free(parg->chrom_seq);
     free(parg);
 }
 
@@ -301,6 +269,7 @@ char* parse_iupac(char c)
 int parse_motif_pattern_help(char* motif, char** pattern, int* index)
 {
 	int ind = *index;
+    
 	if (is_valid_dna(motif, strlen(motif))) {
 		bool exist = false;
 		for (int n = 0; n < ind; n++) {

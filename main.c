@@ -3,6 +3,7 @@
 #include <unistd.h>
 #include "thread_pool.h"
 #include "motifSearch.h"
+#include "fasta.h"
 
 #define MIN(a,b) (a) < (b) ? (a) : (b)
 #define MAX_THREADS  sysconf(_SC_NPROCESSORS_ONLN)
@@ -23,13 +24,25 @@ void usage()
     printf("");
 }
 
+void *test(void *arg) {
+    struct par_arg *parg = (struct par_arg *) arg;
+    printf("entry %s\n", parg->entry->name);
+}
+
+
 int main(int argc, char const *argv[])
 {
     static bool verbose_flag;
     int n_threads = 0;
     char *file_path = NULL;
     char *motif = NULL;
+    FastaIndex *fi;
     int c;
+    pthread_mutexattr_t attr;
+    pthread_mutexattr_init(&attr);
+    pthread_mutex_t pt_mu;
+    pthread_mutex_init(&pt_mu, &attr);
+
     while (1)
     {
         static struct option long_options[] =
@@ -93,39 +106,48 @@ int main(int argc, char const *argv[])
             fatal("Argument capture failed\n");
         }
     }
+      
     n_threads = n_threads ? n_threads : MAX_THREADS;
     char *pattern[MAX_PATTERN_LEN];
     int num = parse_motif_pattern(motif, &pattern);
-    struct chrom_seq* chrom_seqs[MAX_CHROM];
 
-    if (n_threads > 1) {
-        tpool_t *p = tpool_init(n_threads);
-        tpool_process_t *q = tpool_process_init(p, 16, true);
-        int num_chrom = read_fasta(file_path, chrom_seqs);
-        
-        for (int i = 0; i < num_chrom; ++i) {
+
+    pthread_setconcurrency(2);
+    tpool_t *p = tpool_init(n_threads);
+    tpool_process_t *q = tpool_process_init(p, 16, true);
+
+    char *index_file_path = malloc(strlen(file_path)+4);
+    strcpy(index_file_path, file_path);
+    strcpy(index_file_path + strlen(file_path), ".fai");
+
+    if (!(fi = readFastaIndex(index_file_path, 0))) {
+        printf("No index file found. Generating index file...\n");
+        fi = writeFastaIndex(file_path, 0, true);
+    }
+
+    int num_chrom = kv_size(fi->sequence_names);
+    char *chrom_name;
+    FastaIndexEntry *entry;
+    kh_foreach(fi->name_field, chrom_name, entry, {
             int blk;
             struct par_arg *arg = malloc(sizeof(struct par_arg));
-            arg->chrom_seq = chrom_seqs[i];
-            arg->motif_len = strlen(motif);
+            arg->chrom = chrom_name;
+            arg->file_path = file_path;
+            arg->entry = entry;
             arg->n_patterns = num;
             arg->pattern = pattern;
+            arg->pt_mu = &pt_mu;
+            arg->n_threads = n_threads;
             do {
-                blk = tpool_dispatch(p, q, &search_fasta_par, arg, NULL, &free_par_arg, true);
+                blk = tpool_dispatch(p, q, search_fasta_par, (void *)arg, NULL, free_par_arg, true);
                 if (blk == -1) {
                     usleep(10000);
                 }
             } while (blk == -1);
-        }
-        tpool_process_flush(q);
-        tpool_process_destroy(q);
-        tpool_destroy(p);
-    } else {
-        search_fasta(file_path, pattern, num, strlen(motif));
-        for (int i = 0; i < num; ++i)
-        {
-            free(pattern[i]);
-        }
-        return 0;
-    }
+    })
+
+    tpool_process_flush(q);
+    tpool_process_destroy(q);
+    tpool_destroy(p);
+    pthread_exit(NULL);
 }

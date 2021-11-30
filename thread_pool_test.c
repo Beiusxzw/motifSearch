@@ -29,9 +29,9 @@ void *doit_square_u(void *arg) {
 
 int main(int argc, char const *argv[])
 {
-    /* Test */
+
     pthread_setconcurrency(2);
-    tpool_t *p = tpool_init(8);
+    tpool_t *p = tpool_init(1);
     tpool_process_t *q = tpool_process_init(p, 16, false);
     tpool_result_t *r;
     for (int i = 0; i < 100; ++i) {
@@ -58,4 +58,3 @@ int main(int argc, char const *argv[])
     tpool_destroy(p);
     pthread_exit(NULL);
 }
-

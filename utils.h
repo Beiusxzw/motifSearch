@@ -4,6 +4,8 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <stdio.h>
+#include <stdarg.h>
 
 /* Optimization hints */
 #if defined __GNUC__ || defined __llvm__
@@ -30,6 +32,15 @@
 #define parent_struct(ptr, type, member) \
     (ptr ? ((type*) (((char*) ptr) - offsetof(type, member))) : NULL)
 
-#define fatal(s) \
-    printf("\033[1;31m%s\033[0m\n", s); \
-    exit(0);
+#define fatal(s) do { \
+    fprintf(stderr, "\033[1;31m%s\033[0m\n", s); \
+    exit(1); \
+} while (0);
+
+
+#define fatalf(fmt, args...) { \
+    fprintf(stderr, "\033[0;31m"); \
+    fprintf(stderr, fmt, ## args); \
+    fprintf(stderr, "\033[0m\n"); \
+    exit(1); \
+} while (0);

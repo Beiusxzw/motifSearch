@@ -1,14 +1,17 @@
 {
     "workbench.colorTheme": "Visual Studio Light - C++",
+    "git.ignoreLimitWarning": true,
+    "workbench.colorCustomizations": {
+        "terminal.foreground" : "#000",
+        "terminal.border": "#fff",
+        "terminal.ansiBlack": "#797979",
+        "terminal.ansiBrightWhite": "#ff0000",
+        "terminal.ansiWhite": "#f7f7f7",
+        "terminal.ansiYellow": "#ffcd2a"
+    },
     "files.associations": {
-        "__functional_03": "c",
-        "functional": "c",
-        "istream": "cpp",
-        "aho_queue.h": "c",
-        "aho_text.h": "c",
-        "ahocorasick.h": "c",
-        "aho_trie.h": "c",
-        "locale": "c",
-        "thread_pool.h": "c"
-    }
+        "module.h": "c",
+        "stdlib.h": "c",
+        "complex": "c"
+    },
 }
