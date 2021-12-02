@@ -124,14 +124,21 @@ int main(int argc, char const *argv[])
         printf("No index file found. Generating index file...\n");
         fi = writeFastaIndex(file_path, 0, true);
     }
-
     int num_chrom = kv_size(fi->sequence_names);
     char *chrom_name;
     FastaIndexEntry *entry;
     kh_foreach(fi->name_field, chrom_name, entry, {
             int blk;
             struct par_arg *arg = malloc(sizeof(struct par_arg));
-            arg->chrom = chrom_name;
+            /* full header or not ?*/
+            char buf[100];
+            memset(buf, 0, 100);
+            for (int i = 0; i < strlen(entry->name); ++i) {
+                if (entry->name[i] != ' ') {
+                    buf[i] = entry->name[i];
+                }
+            }
+            arg->chrom = buf;
             arg->file_path = file_path;
             arg->entry = entry;
             arg->n_patterns = num;

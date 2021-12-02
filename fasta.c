@@ -84,7 +84,7 @@ void *writeFastaIndex(char* fasta_file_path, bool full_header, bool return_index
     FastaIndex *fi = fastaIndexInit();
     char *line = NULL;
     int64_t line_length;
-    int64_t offset;
+    int64_t offset = 0;
     int64_t line_number;
     bool mismatched_line_len = false;
     bool empty_line = false;
@@ -154,6 +154,7 @@ void *writeFastaIndex(char* fasta_file_path, bool full_header, bool return_index
     entryToIndex(entry, fi);
     fastaIndexEntryEmpty(entry);
     indexToFile(fi, op);
+    fclose(op);
     if (return_index) {
         return fi;
     } else {

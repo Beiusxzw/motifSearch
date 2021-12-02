@@ -1,5 +1,7 @@
 # motifSearch
 Current version: 0.0.2 == multi-threaded searching
+
+
 Snow's motif search in C (A simple command-line-tool, expecting to be faster than homer's scanMotifGenome)
 
 

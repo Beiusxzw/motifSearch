@@ -9,7 +9,7 @@ AHOCORASICK_DIR= ./ahocorasick/src
 SHARED_CS= motifSearch.c thread_pool.c
 
 ifeq ($(aarch64),)	#if aarch64 is not defined
-	CFLAGS+=-D_FILE_OFFSET_BITS=64 -mfpu=neon -fsigned-char
+	CFLAGS+=-D_FILE_OFFSET_BITS=64 -fsigned-char
 else				#if aarch64 is defined
 	CFLAGS+=-D_FILE_OFFSET_BITS=64 -fsigned-char
 endif
