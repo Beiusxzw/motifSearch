@@ -99,7 +99,8 @@ void complement(char *dna, long length)
 
 char *reverseComplement(char *dna, long length)
 {
-	char* new_dna = malloc(strlen(dna));
+	char* new_dna = malloc(strlen(dna)+1);
+    memset(new_dna, 0, strlen(dna)+1);
 	memcpy(new_dna, dna, strlen(dna));
     reverseBytes(new_dna, length);
     complement(new_dna, length);
@@ -167,17 +168,23 @@ void aho_callback(void *arg, struct aho_match_t *m)
 {
 	struct pt_info *t = (struct pt_info *) arg;
     while (pthread_mutex_trylock(t->mu) != 0);
-    if ((m->id % 2) == 0) printf("%s\t%lu\t%lu\t.\t.\t+\n", t->chrom, m->pos, m->pos + t->motif_len);
-    else printf("%s\t%lu\t%lu\t.\t.\t-\n", t->chrom, m->pos, m->pos + t->motif_len);
+    char *s = calloc(t->motif_len+1, 1);
+    memcpy(s, t->seq + m->pos, t->motif_len);
+    if ((m->id % 2) == 0) printf("%s\t%llu\t%llu\t.\t.\t+\t%s\n", t->chrom, m->pos, m->pos + t->motif_len, s);
+    else printf("%s\t%llu\t%llu\t.\t.\t-\t%s\n", t->chrom, m->pos, m->pos + t->motif_len, s);
     pthread_mutex_unlock(t->mu);
+    free(s);
 }
 
 
 void aho_callback_nolock(void *arg, struct aho_match_t *m)
 {
 	struct pt_info *t = (struct pt_info *) arg;
-    if ((m->id % 2) == 0) printf("%s\t%lu\t%lu\t.\t.\t+\n", t->chrom, m->pos, m->pos + t->motif_len);
-    else printf("%s\t%lu\t%lu\t.\t.\t-\n", t->chrom, m->pos, m->pos + t->motif_len);
+    char *s = calloc(t->motif_len+1, 1);
+    memcpy(s, t->seq + m->pos, t->motif_len);
+    if ((m->id % 2) == 0) printf("%s\t%llu\t%llu\t.\t.\t+\t%s\n", t->chrom, m->pos, m->pos + t->motif_len, s);
+    else printf("%s\t%llu\t%llu\t.\t.\t-\t%s\n", t->chrom, m->pos, m->pos + t->motif_len, s);
+    free(s);
 }
 
 void search_motif(struct ahocorasick *aho, const char* seq, const char* chrom, int motif_len, bool uselock, pthread_mutex_t *mu)
@@ -189,6 +196,7 @@ void search_motif(struct ahocorasick *aho, const char* seq, const char* chrom, i
 	arg->chrom = chrom;
 	arg->motif_len = motif_len;
     arg->mu = mu;
+    arg->seq = seq;
 	if (uselock) aho_register_match_callback(aho, &aho_callback, (void *)arg);
     else aho_register_match_callback(aho, &aho_callback_nolock, (void *)arg);
 	aho_findtext(aho, seq, strlen(seq));
@@ -203,10 +211,12 @@ void init_ahocorasick(struct ahocorasick *aho, const char** pattern, int n_patte
         printf("# Pattern: %s\n", pattern[i]);
     }
     **/
+      
 	for (int i = 0; i < n_patterns; i++)
 	{
 		aho_add_match_text(aho, pattern[i], strlen(pattern[i]));
 	}
+       
 	aho_create_trie(aho);
 }
 
@@ -269,7 +279,6 @@ char* parse_iupac(char c)
 int parse_motif_pattern_help(char* motif, char** pattern, int* index)
 {
 	int ind = *index;
-    
 	if (is_valid_dna(motif, strlen(motif))) {
 		bool exist = false;
 		for (int n = 0; n < ind; n++) {
@@ -286,7 +295,7 @@ int parse_motif_pattern_help(char* motif, char** pattern, int* index)
 			*index = ind+1;
 		}
 	} else if (is_valid_ambiguity_codes(motif, strlen(motif))) {
-		char* tmp = malloc(sizeof(motif)+1);
+		char* tmp = malloc(strlen(motif)+1);
 		memcpy(tmp, motif, strlen(motif));
 		for (int i = 0; i < strlen(motif); ++i) {
 			char* amb = parse_iupac(tmp[i]);

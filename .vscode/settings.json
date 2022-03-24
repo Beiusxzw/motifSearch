@@ -1,8 +1,8 @@
 {
-    "workbench.colorTheme": "Visual Studio Light - C++",
+    "workbench.colorTheme":"Visual Studio Dark",
     "git.ignoreLimitWarning": true,
     "workbench.colorCustomizations": {
-        "terminal.foreground" : "#000",
+        "terminal.foreground" : "#fff",
         "terminal.border": "#fff",
         "terminal.ansiBlack": "#797979",
         "terminal.ansiBrightWhite": "#ff0000",

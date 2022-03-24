@@ -24,6 +24,9 @@ FastaIndexEntry *fastaIndexEntryInit()
 
 FastaIndexEntry *fastaIndexEntryInitData(char* name, uint64_t length, uint64_t offset, uint64_t line_blen, uint64_t line_len, bool full_header) {
     FastaIndexEntry *entry = (FastaIndexEntry *) malloc (sizeof(FastaIndexEntry));
+    if (name[strlen(name)-1]=='\n') {
+        name[strlen(name)-1]='\0';
+    }
     entry->name = name;
     entry->length = length;
     entry->line_len = line_len;
@@ -117,7 +120,9 @@ void *writeFastaIndex(char* fasta_file_path, bool full_header, bool return_index
             char *new_name = malloc(line_length+1);
             strcpy(new_name, line + 1);
             entry->name = new_name;
-           
+            if (entry->name[strlen(entry->name)-1]=='\n') {
+                entry->name[strlen(entry->name)-1]='\0';
+            }
         } else {
             // assume we have a sequence file
             if (entry->offset == -1) {
@@ -279,7 +284,16 @@ char *getFastaSequenceMmap(void *filemm, FastaIndex *fi, char *seq_name)
     if (*pend == '\n') {
         *pend = '\0';
     }
-    return seq;
+    char* ret = (char *)calloc(seqlen + 1, 1);
+    size_t t = 0;
+    for (size_t i = 0; i < seqlen; ++i) {
+        if (seq[i] != '\n') {
+            ret[t] = seq[i];
+            t++;
+        }
+    }
+    free(seq);
+    return ret;
 }
 
 char *getFastaSequenceMmap2(void *filemm, FastaIndexEntry *entry)
@@ -297,23 +311,32 @@ char *getFastaSequenceMmap2(void *filemm, FastaIndexEntry *entry)
     if (*pend == '\n') {
         *pend = '\0';
     }
-    return seq;
+    char* ret = (char *)calloc(seqlen + 1, 1);
+    size_t t = 0;
+    for (size_t i = 0; i < seqlen; ++i) {
+        if (seq[i] != '\n') {
+            ret[t] = seq[i];
+            t++;
+        }
+    }
+    free(seq);
+    return ret;
 }
 
-/*
 
+/*
 int main(int argc, char const *argv[])
 {
 
-    FastaIndex* fi = readFastaIndex("/Users/snowxue/Documents/refData/Homo_sapiens.GRCh38.dna.primary_assembly.fa.fai", 0);
-    struct fmm *m = readFastaByMmap("/Users/snowxue/Documents/refData/Homo_sapiens.GRCh38.dna.primary_assembly.fa");
+    FastaIndex* fi = readFastaIndex("/Users/snow/Documents/refData/fasta/Homo_sapiens.GRCh38.97.dna.primary_assembly.fa.fai", 0);
+    struct fmm *m = readFastaByMmap("/Users/snow/Documents/refData/fasta/Homo_sapiens.GRCh38.97.dna.primary_assembly.fa");
     printf("%s\n", getFastaSequenceMmap(m->mm, fi, "KI270392.1"));
     munmap(m->mm, m->fs);
     free(m);
     fastaIndexDestory(fi);
 
 
-    writeFastaIndex("/Users/snowxue/Desktop/Homo_sapiens.GRCh38.dna.primary_assembly.fa", 0);  
+    // writeFastaIndex("/Users/snowxue/Desktop/Homo_sapiens.GRCh38.dna.primary_assembly.fa", 0);  
 
 }
 

@@ -11,7 +11,7 @@
 
 void version()
 {
-    printf("Snow's motifSearch version 0.0.2\n");
+    printf("Snow's motifSearch version 0.0.3\n");
     printf("Usage:\n");
     printf("\t-f/--fasta\tfasta file\n");
     printf("\t-m/--motif\tmotif string\n");
@@ -106,11 +106,18 @@ int main(int argc, char const *argv[])
             fatal("Argument capture failed\n");
         }
     }
-      
+
     n_threads = n_threads ? n_threads : MAX_THREADS;
     char *pattern[MAX_PATTERN_LEN];
-    int num = parse_motif_pattern(motif, &pattern);
 
+    int num = parse_motif_pattern(motif, &pattern);
+    
+    /*
+    printf("%d\n", strlen(motif));
+    for (int i = 0; i < num; ++i) {
+        printf("%s\n", pattern[i]);
+    }
+    */
 
     pthread_setconcurrency(2);
     tpool_t *p = tpool_init(n_threads);
@@ -131,20 +138,23 @@ int main(int argc, char const *argv[])
             int blk;
             struct par_arg *arg = malloc(sizeof(struct par_arg));
             /* full header or not ?*/
-            char buf[100];
-            memset(buf, 0, 100);
-            for (int i = 0; i < strlen(entry->name); ++i) {
-                if (entry->name[i] != ' ') {
-                    buf[i] = entry->name[i];
+            if (chrom_name[strlen(chrom_name)-1] == '\n') {
+                chrom_name[strlen(chrom_name)-1] = '\0';
+            }
+            for (int i = 0; i < strlen(chrom_name); ++i) {
+                if (chrom_name[i] == ' ') {
+                    chrom_name[i] = '\0';
                 }
             }
-            arg->chrom = buf;
+            arg->chrom = chrom_name;
+
             arg->file_path = file_path;
             arg->entry = entry;
             arg->n_patterns = num;
             arg->pattern = pattern;
             arg->pt_mu = &pt_mu;
             arg->n_threads = n_threads;
+            arg->motif_len = strlen(motif);
             do {
                 blk = tpool_dispatch(p, q, search_fasta_par, (void *)arg, NULL, free_par_arg, true);
                 if (blk == -1) {

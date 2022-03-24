@@ -9,8 +9,8 @@
 #include "fasta.h"
 #include "./ahocorasick/include/ahocorasick.h"
 
-#define MAX_MOTIF_LEN 25
-#define MAX_PATTERN_LEN 80
+#define MAX_MOTIF_LEN 64
+#define MAX_PATTERN_LEN 512
 
 KSEQ_INIT(FILE*, read)
 
@@ -18,6 +18,7 @@ struct pt_info {
 	int motif_len;
 	char* chrom;
 	pthread_mutex_t *mu;
+	char *seq;
 };
 
 struct par_arg {
